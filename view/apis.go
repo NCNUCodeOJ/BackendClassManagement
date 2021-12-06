@@ -928,18 +928,21 @@ func GetProblemByID(c *gin.Context) {
 			})
 			return
 		}
-		if _, err := models.ProblemByProblemID(problemID); err != nil {
+		var problems models.Problem
+		if problem, err := models.ProblemByProblemID(problemID); err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"message": "problem doesn't exist",
 			})
 			return
+		} else {
+			problems = problem
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message":            "problem exist",
 			"problem_id":         problemID,
 			"class_id":           classID,
-			"start_time":         1638692151,
-			"end_time":           1638692151,
+			"start_time":         uint(problems.Start_time.Unix()),
+			"end_time":           uint(problems.End_time.Unix()),
 			"problem_name":       "接龍遊戲2",
 			"description":        "開始接龍",
 			"input_description":  "567",
