@@ -2,6 +2,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/NCNUCodeOJ/BackendQuestionDatabase v0.2.0 h1:EMAnPHqnR302gAdyGiKnyu6CMkfKKYbQDyIlWfB/Ks4=
 github.com/NCNUCodeOJ/BackendQuestionDatabase v0.2.0/go.mod h1:rtJ+KqyJref2JJZ1buDxr/khRw18WgU1sGhFM6RBoVE=
+github.com/NCNUCodeOJ/BackendQuestionDatabase v0.3.3 h1:719Vriho+9WYmoSrIPWJh1CwlYGdHHA8Cl+FEC+vJH8=
+github.com/NCNUCodeOJ/BackendQuestionDatabase v0.3.3/go.mod h1:rtJ+KqyJref2JJZ1buDxr/khRw18WgU1sGhFM6RBoVE=
 github.com/appleboy/gin-jwt/v2 v2.7.0 h1:MjbX0OVC1hmb+cYNSW7yrlG8KfIN/X0qn5kqhAsHinY=
 github.com/appleboy/gin-jwt/v2 v2.7.0/go.mod h1:AP2pmslwuqdHcjua9m8APdgqX9Ksx0ZM34d5RGvUYBU=
 github.com/appleboy/gofight/v2 v2.1.2 h1:VOy3jow4vIK8BRQJoC/I9muxyYlJ2yb9ht2hZoS3rf4=
