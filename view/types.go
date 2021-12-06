@@ -40,6 +40,7 @@ type getproblemAPIRequest struct {
 	End_Time          uint             `json:"end_time"`
 }
 type mossAPIRequest struct {
-	Problem_ID uint   `json:"problem_id"`
-	Language   string `json:"language"`
+	Problem_ID    string `json:"problem_id"`
+	Submission_ID string `json:"submission_id"`
+	Language      string `json:"language"`
 }

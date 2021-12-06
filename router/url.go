@@ -55,6 +55,7 @@ func SetupRouter() *gin.Engine {
 	}
 
 	baseURL := "api/v1"
+	privateURL := "api/private/v1"
 	r := gin.Default()
 	r.GET("/ping", view.Pong)
 	class := r.Group(baseURL + "/class")
@@ -98,11 +99,17 @@ func SetupRouter() *gin.Engine {
 	{
 		questionsubmission.POST("/submission", view.CreateProblemSubmission) // 上傳 submission
 	}
-	moss := r.Group(baseURL + "/class/:class_id/problem/:problem_id") // 呼叫moss
-	moss.Use(authMiddleware.MiddlewareFunc())
-	moss.Use(getUserID())
+	mosssetup := r.Group(baseURL + "/class/:class_id/problem/:problem_id/moss") // 呼叫moss
+	mosssetup.Use(authMiddleware.MiddlewareFunc())
+	mosssetup.Use(getUserID())
 	{
-		//moss.POST("/moss", view.CreateMoss) // 上傳 submission
+		mosssetup.GET("", view.SetupMoss) // 上傳 SetUp Moss
+	}
+	mosss := r.Group(privateURL + "/class/:class_id/problem/:problem_id/moss")
+	mosss.Use(authMiddleware.MiddlewareFunc())
+	mosss.Use(getUserID())
+	{
+		// 接收moss
 	}
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"message": "Page not found"})

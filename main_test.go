@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"testing"
 
 	"github.com/NCNUCodeOJ/BackendClassManagement/models"
 	"github.com/NCNUCodeOJ/BackendClassManagement/router"
 	"github.com/appleboy/gofight/v2"
+	"github.com/buger/jsonparser"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ import (
 
 // cspell:disable-next-line
 var token = "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6ZmFsc2UsImV4cCI6NDc5MTA4MjEyMywiaWQiOiI3MTI0MTMxNTQxOTcxMTA3ODYiLCJvcmlnX2lhdCI6MTYzNzQ4MjEyMywidXNlcm5hbWUiOiJ0ZXN0X3VzZXIifQ.pznOSok8X7qv6FSIihJnma_zEy70TerzOs0QDZOq_4RPYOKSEOOYTZ9-VLm2P9XRldS17-7QrLFwjjfXyCodtA"
-var class1ID, problem1ID, test1ID int
+var class1ID, problem1ID, test1ID, submission1ID, submission2ID int
 
 func init() {
 	gin.SetMode(gin.TestMode)
@@ -125,7 +124,6 @@ func TestUpdateClassUser(t *testing.T) {
 	req.Header.Set("Authorization", token)
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
-
 }
 func TestDeleteClassUser(t *testing.T) {
 	r := router.SetupRouter()
@@ -328,6 +326,7 @@ func TestUploadQuestionTestCase(t *testing.T) {
 				Name: "testcase",
 			}}).
 		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+
 			assert.Equal(t, http.StatusCreated, r.Code)
 		})
 	r = gofight.New()
@@ -365,7 +364,10 @@ func TestQuestionSubmissionCreate2(t *testing.T) {
 			"language":    "python3",
 		}).
 		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			data := []byte(r.Body.String())
 
+			id, _ := (jsonparser.GetInt(data, "submission_id"))
+			submission1ID = int(id)
 			assert.Equal(t, http.StatusCreated, r.Code)
 		})
 	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/submission").
@@ -377,6 +379,10 @@ func TestQuestionSubmissionCreate2(t *testing.T) {
 			"language":    "python3",
 		}).
 		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			data := []byte(r.Body.String())
+
+			id, _ := (jsonparser.GetInt(data, "submission_id"))
+			submission2ID = int(id)
 			assert.Equal(t, http.StatusCreated, r.Code)
 		})
 }
@@ -422,6 +428,31 @@ func TestListProblem(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+func TestMossSetup(t *testing.T) {
+	r := router.SetupRouter()
+	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("GET", "/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/moss", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// func TestMoss(t *testing.T) {
+// 	r := gofight.New()
+// 	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/moss/"+strconv.Itoa(submission1ID)).
+// 		SetHeader(gofight.H{
+// 			"Authorization": token,
+// 		}).
+// 		SetJSON(gofight.D{
+// 			"problem_id":    1,
+// 			"submission_id": 1638692151,
+// 			"language":      "python3",
+// 		}).
+// 		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+// 			assert.Equal(t, http.StatusCreated, r.Code)
+// 		})
+// }
 
 func TestDeleteProblem(t *testing.T) {
 	r := router.SetupRouter()
@@ -432,10 +463,11 @@ func TestDeleteProblem(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
-func TestCleanup(t *testing.T) {
-	err := os.Remove("test.db")
-	if err != nil {
-		log.Println(err.Error())
-		t.Fail()
-	}
-}
+
+// func TestCleanup(t *testing.T) {
+// 	err := os.Remove("test.db")
+// 	if err != nil {
+// 		log.Println(err.Error())
+// 		t.Fail()
+// 	}
+// }
