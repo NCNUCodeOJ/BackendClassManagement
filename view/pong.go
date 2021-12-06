@@ -1,8 +1,9 @@
 package view
 
 import (
-	"NCNUOJBackend/ClassManagement/models"
 	"net/http"
+
+	"github.com/NCNUCodeOJ/BackendClassManagement/models"
 
 	"github.com/gin-gonic/gin"
 )

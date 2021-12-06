@@ -1,14 +1,14 @@
 package router
 
 import (
-	"NCNUOJBackend/ClassManagement/view"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/NCNUCodeOJ/BackendQuestionDatabase/views"
+	"github.com/NCNUCodeOJ/BackendClassManagement/view"
+
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -55,7 +55,6 @@ func SetupRouter() *gin.Engine {
 	}
 
 	baseURL := "api/v1"
-	privateURL := "api/private/v1"
 	r := gin.Default()
 	r.GET("/ping", view.Pong)
 	class := r.Group(baseURL + "/class")
@@ -66,34 +65,44 @@ func SetupRouter() *gin.Engine {
 		class.GET("/:class_id", view.GetClassByID)  // 查詢課程
 		class.POST("", view.CreateClass)            // 創建課程
 		class.PATCH("/:class_id", view.UpdateClass) // 編輯課程資訊
+		class.GET("", view.ListClass)               // 列出所有課程
 		// 課程使用者
 		class.GET("/:class_id/classuser/:classuser_id", view.GetClassUserByID)   // 查詢課程使用者
 		class.POST("/:class_id/classuser", view.CreateClassUser)                 // 新增課程使用者
 		class.DELETE("/:class_id/classuser/:classuser_id", view.DeleteClassUser) // 刪除課程使用者
 		class.PATCH("/:class_id/classuser/:classuser_id", view.UpdateClassUser)  // 編輯課程使用者
-		// Problem 題目
-		class.GET("/:class_id/problem/:problem_id", view.GetProblemByID)   // 查詢題目
-		class.POST("/:class_id/problem", view.CreateProblem)               // 創建題目
-		class.DELETE("/:class_id/problem/:problem_id", view.DeleteProblem) // 刪除題目
-		class.PATCH("/:class_id/problem/:problem_id", view.UpdateProblem)  // 編輯題目資訊
+		class.GET("/:class_id/classuser", view.ListClassUser)                    // 列出所有課程使用者
+
 		// test 測驗
 		class.GET("/:class_id/test/:test_id", view.GetTestByID)   // 查詢測驗
 		class.POST("/:class_id/test", view.CreateTest)            // 創建測驗
 		class.DELETE("/:class_id/test/:test_id", view.DeleteTest) // 刪除測驗
 		class.PATCH("/:class_id/test/:test_id", view.UpdateTest)  // 編輯測驗資訊
+		class.GET("/:class_id/test", view.ListTest)               // 列出所有課程測驗
 	}
-	privateProblem := r.Group(privateURL + "/class/:class_id/problem/:problem_id/problem")
-	privateProblem.Use(authMiddleware.MiddlewareFunc())
-	privateProblem.Use(getUserID())
+	// Problem 題目
+	problem := r.Group(baseURL + "/class/:class_id/problem")
+	problem.Use(authMiddleware.MiddlewareFunc())
+	problem.Use(getUserID())
 	{
-		privateProblem.POST("/:id/submission", views.CreateSubmission) // 上傳 submission
+		problem.POST("", view.CreateProblem)             // 創建程式碼題目
+		problem.GET("/:problem_id", view.GetProblemByID) // 查詢程式碼題目資訊
+		problem.GET("", view.ListProblem)                // 列出所有課程題目
+		problem.DELETE("/:problem_id", view.DeleteProblem)
+		problem.PATCH("/:problem_id", view.UpdateProblemQuestion)          // 編輯程式碼題目資訊
+		problem.POST("/:problem_id/testcase", view.UploadQuestionTestCase) // 上傳程式碼題目測試 test case
 	}
-	// submission
-	submission := r.Group(privateURL + "/class/:class_id/problem/:problem_id//submission")
+	questionsubmission := r.Group(baseURL + "/class/:class_id/problem/:problem_id")
+	questionsubmission.Use(authMiddleware.MiddlewareFunc())
+	questionsubmission.Use(getUserID())
 	{
-		submission.PATCH("/:id/judge", views.UpdateSubmissionJudgeResult) // 更新 submission judge result
-		submission.PATCH("/:id/style", views.UpdateSubmissionStyleResult) // 更新 submission style result
-		submission.GET("/:id", views.GetSubmissionByID)                   // 取得 submission
+		questionsubmission.POST("/submission", view.CreateProblemSubmission) // 上傳 submission
+	}
+	moss := r.Group(baseURL + "/class/:class_id/problem/:problem_id") // 呼叫moss
+	moss.Use(authMiddleware.MiddlewareFunc())
+	moss.Use(getUserID())
+	{
+		//moss.POST("/moss", view.CreateMoss) // 上傳 submission
 	}
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"message": "Page not found"})

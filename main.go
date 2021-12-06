@@ -1,8 +1,6 @@
 package main
 
 import (
-	"NCNUOJBackend/ClassManagement/models"
-	"NCNUOJBackend/ClassManagement/router"
 	"context"
 	"errors"
 	"log"
@@ -11,6 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/NCNUCodeOJ/BackendClassManagement/models"
+	"github.com/NCNUCodeOJ/BackendClassManagement/router"
 
 	"github.com/gin-gonic/gin"
 )

@@ -32,8 +32,14 @@ func DeleteClassUser(user_id uint, class_id uint) (err error) {
 }
 
 //ListClass 列出所有課程使用者
-func ListClassUser() (classuser []ClassUser, err error) {
-	err = DB.Find(&classuser).Error
+func ListClassUser(class_id uint) (classuser []ClassUser, err error) {
+	err = DB.Where("class_id = ?", class_id).Find(&classuser).Error
+	return
+}
+
+//ListClass 列出課程使用者的所有課堂
+func ListClassUserClass(user_id uint) (classuser []ClassUser, err error) {
+	err = DB.Where("user_id = ?", user_id).Find(&classuser).Error
 	return
 }
 

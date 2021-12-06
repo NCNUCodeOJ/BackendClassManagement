@@ -32,13 +32,13 @@ func DeleteTest(id uint) (err error) {
 }
 
 //ListTest 列出所有測驗
-func ListTest() (test []Test, err error) {
-	err = DB.Find(&test).Error
+func ListTest(class_id uint) (test []Test, err error) {
+	err = DB.Where("class_id =?", class_id).Find(&test).Error
 	return
 }
 
 //TestkByTestID 用 測驗 ID 查詢測驗
-func TestkByTestID(id uint) (Test, error) {
+func TestByTestID(id uint) (Test, error) {
 	var test Test
 
 	if err := DB.Where("id = ?", id).First(&test).Error; err != nil {
