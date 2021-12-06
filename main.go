@@ -20,6 +20,7 @@ var srv *http.Server
 
 func start() {
 	models.Setup()
+
 	r := router.SetupRouter()
 	if gin.Mode() == "debug" {
 		srv = &http.Server{

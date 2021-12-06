@@ -18,8 +18,8 @@ import (
 	"github.com/vincentinttsh/zero"
 )
 
-var hostURL = os.Getenv("HOST_URL")   // problem
-var hostURL2 = os.Getenv("HOST_URL2") // test
+var problemHost = os.Getenv("PROBLEM_HOST")     // problem
+var testpaperHost = os.Getenv("TESTPAPER_HOST") // test
 var privateURL = "/api/private/v1"
 
 // Role 0 學生 1 助教 2 老師
@@ -27,13 +27,16 @@ var privateURL = "/api/private/v1"
 // problem 題目
 // test 測驗
 
-// 檢查課程使用者在課堂操作的權限
-func Check_UserRole(user_id uint, class_id uint) (int, error) {
-	if classuser, err := models.ClassUserByClassUserID(user_id, class_id); err != nil {
+//CheckUserRole 檢查課程使用者在課堂操作的權限
+func CheckUserRole(userID uint, classID uint) (int, error) {
+	var err error
+	var classUser models.ClassUser
+
+	if classUser, err = models.ClassUserByClassUserID(userID, classID); err != nil {
 		return -1, err
-	} else {
-		return classuser.Role, nil
 	}
+
+	return classUser.Role, nil
 }
 
 // CreateClass 新增課程
@@ -86,10 +89,10 @@ func CreateClassUser(c *gin.Context) {
 	data := classuserAPIRequest{} // 接收新增課程使用者資料的struct，欄位: Class_ID(課程ID)、User_ID(欲新增的課程使用者ID)、Role(角色)
 	var classuser models.ClassUser
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 先抓 URL 裡面的課堂ID，準備確認操作權限
-	classID := uint(class_id)
+	id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 先抓 URL 裡面的課堂ID，準備確認操作權限
+	classID := uint(id)
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -131,10 +134,10 @@ func CreateTest(c *gin.Context) {
 	var test models.Test
 
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	id, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(id)
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -170,8 +173,8 @@ func CreateTest(c *gin.Context) {
 
 // DeleteClass 刪除課程 (老師可用)
 func DeleteClass(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 class_id 才知道要刪除哪個課程
-	var class_ID uint = uint(Id)
+	id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 class_id 才知道要刪除哪個課程
+	var classID uint = uint(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -181,28 +184,28 @@ func DeleteClass(c *gin.Context) {
 
 	userID := c.MustGet("userID").(uint)
 	// 確認操作權限，限老師(2)可用
-	if user_role, err := Check_UserRole(userID, class_ID); err != nil || user_role != 2 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole != 2 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
 
-	if zero.IsZero(class_ID) {
+	if zero.IsZero(classID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
 		})
 		return
 	}
 	// 檢查是否有這堂課
-	if _, err := models.ClassByClassID(class_ID); err != nil {
+	if _, err := models.ClassByClassID(classID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "不存在此課程",
 		})
 		return
 	}
 	// 刪除課程
-	if err := models.DeleteClass(class_ID); err != nil {
+	if err := models.DeleteClass(classID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "課程刪除失敗",
 		})
@@ -210,15 +213,15 @@ func DeleteClass(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"class_id": Id,
+		"class_id": id,
 		"message":  "課程刪除成功",
 	})
 }
 
 // DeleteClassUser 刪除課程使用者 (老師可用)
 func DeleteClassUser(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classuser_id，才知道要刪除哪個課堂使用者
-	var classuser_ID uint = uint(Id)
+	id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classuser_id，才知道要刪除哪個課堂使用者
+	var classUserID uint = uint(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -227,31 +230,31 @@ func DeleteClassUser(c *gin.Context) {
 	}
 
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id，才知道是哪堂課
-	classID := uint(class_id)
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id，才知道是哪堂課
+	classID := uint(cid)
 	// 確認操作權限，限老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 2 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 2 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
 
-	if zero.IsZero(classuser_ID) {
+	if zero.IsZero(classUserID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
 		})
 		return
 	}
 	// 檢查這位使用者是否存在在課堂
-	if _, err := models.ClassUserByClassUserID(classuser_ID, classID); err != nil {
+	if _, err := models.ClassUserByClassUserID(classUserID, classID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "此課程無該使用者",
 		})
 		return
 	}
 	// 移除在這堂課的課堂使用者
-	if err := models.DeleteClassUser(classuser_ID, classID); err != nil {
+	if err := models.DeleteClassUser(classUserID, classID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "課程使用者刪除失敗",
 		})
@@ -259,7 +262,7 @@ func DeleteClassUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"classuser_id": Id,
+		"classuser_id": id,
 		"message":      "課程使用者刪除成功",
 	})
 
@@ -267,8 +270,8 @@ func DeleteClassUser(c *gin.Context) {
 
 // DeleteProblem 刪除題目
 func DeleteProblem(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 裡的 problem_id ，才知道要刪除哪個題目
-	var prbolem_ID uint = uint(Id)
+	id, err := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 裡的 problem_id ，才知道要刪除哪個題目
+	var problemID uint = uint(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -276,31 +279,31 @@ func DeleteProblem(c *gin.Context) {
 	}
 
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
 
-	if zero.IsZero(prbolem_ID) {
+	if zero.IsZero(problemID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
 		})
 		return
 	}
 	// 檢查課堂是否有這個題目
-	if _, err := models.ProblemByProblemID(prbolem_ID); err != nil {
+	if _, err := models.ProblemByProblemID(problemID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "不存在此課程",
 		})
 		return
 	}
 	// 刪除題目
-	if err := models.DeleteProblem(prbolem_ID); err != nil {
+	if err := models.DeleteProblem(problemID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "課程刪除失敗",
 		})
@@ -308,15 +311,15 @@ func DeleteProblem(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"problem_id": Id,
+		"problem_id": id,
 		"message":    "課程刪除成功",
 	})
 }
 
 // DeleteTest 刪除測驗 (助教、老師可用)
 func DeleteTest(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("test_id"))
-	var test_ID uint = uint(Id)
+	id, err := strconv.Atoi(c.Params.ByName("test_id"))
+	var testID uint = uint(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -325,28 +328,28 @@ func DeleteTest(c *gin.Context) {
 	}
 
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
-	if zero.IsZero(test_ID) {
+	if zero.IsZero(testID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
 		})
 		return
 	}
-	if _, err := models.TestByTestID(test_ID); err != nil {
+	if _, err := models.TestByTestID(testID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "不存在此課程",
 		})
 		return
 	}
-	if err := models.DeleteTest(test_ID); err != nil {
+	if err := models.DeleteTest(testID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "課程刪除失敗",
 		})
@@ -354,14 +357,14 @@ func DeleteTest(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"test_id": Id,
+		"test_id": id,
 		"message": "課程刪除成功",
 	})
 }
 
 // UpdateClass 更新課程 (老師可用)
 func UpdateClass(c *gin.Context) {
-	class_id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id，才知道要改哪個課
+	cid, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id，才知道要改哪個課
 	var class models.Class
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -370,9 +373,9 @@ func UpdateClass(c *gin.Context) {
 		return
 	}
 	userID := c.MustGet("userID").(uint)
-	classID := uint(class_id)
+	classID := uint(cid)
 	// 確認操作權限，限老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role != 2 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole != 2 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -405,15 +408,15 @@ func UpdateClass(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"class_id": class_id,
+		"class_id": cid,
 		"message":  "課程更新成功",
 	})
 }
 
 // UpdateClassUser 更新課程使用者 (老師可用)
 func UpdateClassUser(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classuser_id ，才知道要改哪位課堂使用者
-	classuser_id := uint(Id)
+	id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classUserID ，才知道要改哪位課堂使用者
+	classUserID := uint(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -421,10 +424,10 @@ func UpdateClassUser(c *gin.Context) {
 		return
 	}
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
 	// 確認操作權限，限老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role != 2 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole != 2 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -443,7 +446,7 @@ func UpdateClassUser(c *gin.Context) {
 	replace.Replace(&classuser, &data)
 	// model 看 class_id user_id 去改資料
 	classuser.Class_ID = classID
-	classuser.User_ID = classuser_id
+	classuser.User_ID = classUserID
 	// 檢查這堂課是否有這個使用者
 	if classuser, err := models.ClassUserByClassUserID(classuser.User_ID, classID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -460,7 +463,7 @@ func UpdateClassUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"classuser_id": classuser_id,
+		"classuser_id": classUserID,
 		"message":      "課程使用者更新成功",
 	})
 
@@ -468,7 +471,7 @@ func UpdateClassUser(c *gin.Context) {
 
 // UpdateTest 更新測驗
 func UpdateTest(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("test_id"))
+	id, err := strconv.Atoi(c.Params.ByName("test_id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -476,9 +479,9 @@ func UpdateTest(c *gin.Context) {
 		return
 	}
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -494,7 +497,7 @@ func UpdateTest(c *gin.Context) {
 	}
 
 	replace.Replace(&test, &data)
-	test.ID = uint(Id) // model 看 id 去改資料
+	test.ID = uint(id) // model 看 id 去改資料
 	if _, err := models.TestByTestID(test.ID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "找不到該測驗",
@@ -506,14 +509,14 @@ func UpdateTest(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"test_id": Id,
+		"test_id": id,
 		"message": "測驗更新成功",
 	})
 }
 
 // GetClassUserByID 用課程使用者 ID 查詢課程使用者資訊 (學生、助教、老師可用)
 func GetClassUserByID(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classuser_id ，才知道要查哪位課堂使用者
+	id, err := strconv.Atoi(c.Params.ByName("classuser_id")) // 抓 URL 的 classuser_id ，才知道要查哪位課堂使用者
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
@@ -521,25 +524,25 @@ func GetClassUserByID(c *gin.Context) {
 		return
 	}
 
-	var classuser_id uint = uint(Id)
+	var classUserID uint = uint(id)
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，學生只能查自己的資訊
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 && userID != classuser_id {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 && userID != classUserID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
-	if zero.IsZero(Id) {
+	if zero.IsZero(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "不能為零",
 		})
 		return
 	}
 	// 查課堂使用者的資訊
-	if classuser, err := models.ClassUserByClassUserID(classuser_id, classID); err == nil {
+	if classuser, err := models.ClassUserByClassUserID(classUserID, classID); err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"class_id":     classuser.Class_ID,
 			"classuser_id": classuser.User_ID,
@@ -557,30 +560,30 @@ func GetClassUserByID(c *gin.Context) {
 
 // GetClassByID 用 ClassID 查詢課程 (學生、助教、老師可用)
 func GetClassByID(c *gin.Context) {
-	Id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道要找哪堂課
+	id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道要找哪堂課
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
 		})
 		return
 	}
-	var class_id uint = uint(Id)
+	var cid uint = uint(id)
 	userID := c.MustGet("userID").(uint)
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，只能查自己有的課程
-	if _, err := Check_UserRole(userID, class_id); err != nil {
+	if _, err := CheckUserRole(userID, cid); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
-	if zero.IsZero(Id) {
+	if zero.IsZero(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "不能為零",
 		})
 		return
 	}
 	// 查自己的課堂資訊
-	if class, err := models.ClassByClassID(class_id); err == nil {
+	if class, err := models.ClassByClassID(cid); err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"class_id":   class.ID,
 			"class_name": class.Class_Name,
@@ -593,30 +596,30 @@ func GetClassByID(c *gin.Context) {
 // GetTestByID 用測驗 id 查詢測驗 (輸出未完成)
 func GetTestByID(c *gin.Context) {
 
-	Id, err := strconv.Atoi(c.Params.ByName("test_id"))
+	id, err := strconv.Atoi(c.Params.ByName("test_id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
 		})
 		return
 	}
-	var test_id uint = uint(Id)
+	var testID uint = uint(id)
 	userID := c.MustGet("userID").(uint)
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
-	if _, err := Check_UserRole(userID, classID); err != nil {
+	cid, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(cid)
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
-	if zero.IsZero(Id) {
+	if zero.IsZero(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "不能為零",
 		})
 		return
 	}
-	if test, err := models.TestByTestID(test_id); err == nil {
+	if test, err := models.TestByTestID(testID); err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"class_id":     test.Class_ID,
 			"testPaper_id": test.TestPaper_ID,
@@ -630,203 +633,225 @@ func GetTestByID(c *gin.Context) {
 // ListClass 列出使用者所有課堂 (學生、助教、老師可用)
 func ListClass(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
+	var classUser []models.ClassUser
+	var err error
+
 	// 只會列出自己有的課堂
-	if classes, err := models.ListClassUserClass(userID); err != nil {
+	if classUser, err = models.ListClassUserClass(userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
-	} else {
-		var classes_id []uint
-		for _, data := range classes {
-			classes_id = append(classes_id, data.Class_ID)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"classes": classes_id,
-			"message": "list class complete",
-		})
-		return
 	}
+	var classIDs []uint
+	for _, data := range classUser {
+		classIDs = append(classIDs, data.Class_ID)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"classes": classIDs,
+		"message": "list class complete",
+	})
+	return
 }
 
 // ListClassUser 列出所有課堂使用者 (學生、助教、老師可用)
 func ListClassUser(c *gin.Context) {
-	class_id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
-	classID := uint(class_id)
+	id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+	classID := uint(id)
+	userID := c.MustGet("userID").(uint)
+	var classUsers []models.ClassUser
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
 	}
-	userID := c.MustGet("userID").(uint)
+
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，使用者要在該課程，才能查列出所有該課的課程使用者
-	if _, err := Check_UserRole(userID, classID); err != nil {
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
+
 	// 列出所有該課的課程使用者
-	if classusers, err := models.ListClassUser(classID); err != nil {
+	if classUsers, err = models.ListClassUser(classID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
-	} else {
-		var classusers_list []uint
-		for _, data := range classusers {
-			classusers_list = append(classusers_list, data.User_ID)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"classusers": classusers_list,
-			"message":    "list classuser complete",
-		})
-		return
 	}
+
+	var classUsersList []uint
+
+	for _, data := range classUsers {
+		classUsersList = append(classUsersList, data.User_ID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"classusers": classUsersList,
+		"message":    "list classuser complete",
+	})
+	return
 }
 
 // ListProblem 列出課堂所有題目 (學生、助教、老師可用)
 func ListProblem(c *gin.Context) {
-	class_id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
-	classID := uint(class_id)
+	id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+	classID := uint(id)
+	userID := c.MustGet("userID").(uint)
+	var problems_list []uint
+	var problems []models.Problem
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
 	}
-	userID := c.MustGet("userID").(uint)
+
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，使用者要在該課程，才能查列出所有該課的課程題目
-	if _, err := Check_UserRole(userID, classID); err != nil {
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
+
 	// 列出課堂所有題目
-	if problems, err := models.ListProblem(classID); err != nil {
+	if problems, err = models.ListProblem(classID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
-	} else {
-		var problems_list []uint
-		for _, data := range problems {
-			problems_list = append(problems_list, data.ID)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"problems": problems_list,
-			"message":  "list classproblem complete",
-		})
-
-		return
 	}
+
+	for _, data := range problems {
+		problems_list = append(problems_list, data.ID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"problems": problems_list,
+		"message":  "list classproblem complete",
+	})
+
+	return
 }
 
 // ListTest 列出課堂所有測驗
 func ListTest(c *gin.Context) {
-	class_id, err := strconv.Atoi(c.Params.ByName("class_id"))
-	classID := uint(class_id)
+	id, err := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(id)
+	userID := c.MustGet("userID").(uint)
+	var tests []models.Test
+	var testsList []uint
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
 	}
-	userID := c.MustGet("userID").(uint)
-	if _, err := Check_UserRole(userID, classID); err != nil {
+
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
 
-	if tests, err := models.ListTest(classID); err != nil {
+	if tests, err = models.ListTest(classID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
 		return
-	} else {
-		var tests_list []uint
-		for _, data := range tests {
-			tests_list = append(tests_list, data.ID)
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"tests":   tests_list,
-			"message": "list classtest complete",
-		})
-		return
 	}
+
+	for _, data := range tests {
+		testsList = append(testsList, data.ID)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"tests":   testsList,
+		"message": "list classtest complete",
+	})
+	return
 }
 
 // CreateProblem 創程式碼題目 (助教、老師可用)
 func CreateProblem(c *gin.Context) {
+
+	id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+	classID := uint(id)
+	userID := c.MustGet("userID").(uint)
+	var problem models.Problem
+
 	if gin.Mode() == "test" {
-		var problem_test models.Problem
+
+		var problemTest models.Problem
 		rawdata, err := ioutil.ReadAll(c.Request.Body)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "system1 error",
 			})
 			return
 		}
-		class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
-		classID := uint(class_id)
 
-		userID := c.MustGet("userID").(uint)
 		// 確認操作權限，限助教(1)、老師(2)可用
-		if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+		if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
 			return
 		}
+
 		// 抓取其中的開始時間
-		if start_time, err := jsonparser.GetInt(rawdata, "start_time"); err == nil {
-			problem_test.Start_time = time.Unix(start_time, 0)
+		if startTime, err := jsonparser.GetInt(rawdata, "start_time"); err == nil {
+			problemTest.Start_time = time.Unix(startTime, 0)
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "開始時間未填寫",
 			})
 		}
+
 		// 抓取其中的結束時間
-		if end_time, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
-			problem_test.End_time = time.Unix(end_time, 0)
+		if endTime, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
+			problemTest.End_time = time.Unix(endTime, 0)
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "結束時間未填寫",
 			})
 		}
-		problem_test.Problem_ID = uint(123)
+
+		problemTest.Problem_ID = uint(123)
 		// 新增該堂課的題目
-		if err := models.CreateProblem(&problem_test); err != nil {
+		if err := models.CreateProblem(&problemTest); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "系統錯誤",
 			})
 			return
 		}
+
 		c.JSON(http.StatusCreated, gin.H{
 			"message":    "題目創建成功",
-			"problem_id": problem_test.ID,
+			"problem_id": problemTest.ID,
 		})
 		return
 	}
-	class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
-	classID := uint(class_id)
 
-	userID := c.MustGet("userID").(uint)
 	question := questionAPIRequest{} // 獲取程式碼題目的 real ID
-	var problem models.Problem
+
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
 
-	URL := hostURL + privateURL + "/problem"
+	URL := problemHost + privateURL + "/problem"
 	// 給 rawdata
 	rawdata, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -836,7 +861,7 @@ func CreateProblem(c *gin.Context) {
 		return
 	}
 
-	problem.Class_ID = classID               // 設 prbolem 的課堂ID
+	problem.Class_ID = classID               // 設 problem 的課堂ID
 	responseBody := bytes.NewBuffer(rawdata) // 把 rawdata 塞進 body
 	//Leverage Go's HTTP Post function to make request
 	client := &http.Client{}
@@ -880,20 +905,19 @@ func CreateProblem(c *gin.Context) {
 			"message": "未按照格式填寫 ",
 		})
 		return
-	} else {
-		problem.Problem_ID = question.Problem_ID
 	}
+	problem.Problem_ID = question.Problem_ID
 	// 抓取其中的開始時間
-	if start_time, err := jsonparser.GetInt(rawdata, "start_time"); err == nil {
-		problem.Start_time = time.Unix(start_time, 0)
+	if startTime, err := jsonparser.GetInt(rawdata, "start_time"); err == nil {
+		problem.Start_time = time.Unix(startTime, 0)
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "開始時間未填寫",
 		})
 	}
 	// 抓取其中的結束時間
-	if end_time, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
-		problem.End_time = time.Unix(end_time, 0)
+	if endTime, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
+		problem.End_time = time.Unix(endTime, 0)
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "結束時間未填寫",
@@ -916,14 +940,15 @@ func CreateProblem(c *gin.Context) {
 // GetProblemByID 用題目ID查程式碼題目 (學生、助教、老師可用)
 func GetProblemByID(c *gin.Context) {
 	if gin.Mode() == "test" {
-		class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
-		classID := uint(class_id)
+		cid, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+		classID := uint(cid)
 
 		userID := c.MustGet("userID").(uint)
-		problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
-		var problemID = uint(problem_id)
+		pid, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+		var problemID = uint(pid)
+
 		// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
-		if _, err := Check_UserRole(userID, classID); err != nil {
+		if _, err := CheckUserRole(userID, classID); err != nil {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
@@ -966,7 +991,7 @@ func GetProblemByID(c *gin.Context) {
 	var problem_data getproblemAPIRequest // 接收回傳的題目資訊
 	var question_ID int                   // real problem id
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
-	if _, err := Check_UserRole(userID, classID); err != nil {
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -982,7 +1007,7 @@ func GetProblemByID(c *gin.Context) {
 		question_ID = int(problem.Problem_ID)
 	}
 
-	URL := hostURL + privateURL + "/problem/" + strconv.Itoa(question_ID)
+	URL := problemHost + privateURL + "/problem/" + strconv.Itoa(question_ID)
 
 	//Leverage Go's HTTP Post function to make request
 	client := &http.Client{}
@@ -1078,7 +1103,7 @@ func UpdateProblemQuestion(c *gin.Context) {
 		}
 
 		// 確認操作權限，限助教(1)、老師(2)可用
-		if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+		if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
@@ -1126,7 +1151,7 @@ func UpdateProblemQuestion(c *gin.Context) {
 	var problemID = uint(problem_id)
 	var question_ID int
 	// 確認操作權限，限助教(1)、老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -1142,7 +1167,7 @@ func UpdateProblemQuestion(c *gin.Context) {
 		question_ID = int(problem.Problem_ID)
 	}
 
-	URL := hostURL + privateURL + "/problem/" + strconv.Itoa(question_ID)
+	URL := problemHost + privateURL + "/problem/" + strconv.Itoa(question_ID)
 
 	// 要更改的資料
 	rawdata, err := c.GetRawData()
@@ -1242,7 +1267,7 @@ func UploadQuestionTestCase(c *gin.Context) {
 		}
 
 		// 確認操作權限，限助教(1)、老師(2)可用
-		if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+		if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
@@ -1282,7 +1307,7 @@ func UploadQuestionTestCase(c *gin.Context) {
 	}
 	userID := c.MustGet("userID").(uint)
 	// 確認操作權限，限老師(2)可用
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role != 2 {
+	if userRole, err := CheckUserRole(userID, classID); err != nil || userRole != 2 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -1298,7 +1323,7 @@ func UploadQuestionTestCase(c *gin.Context) {
 		question_ID = int(problem.Problem_ID)
 	}
 
-	URL := hostURL + privateURL + "/problem/" + strconv.Itoa(question_ID) + "/testcase"
+	URL := problemHost + privateURL + "/problem/" + strconv.Itoa(question_ID) + "/testcase"
 	rawdata, err := c.GetRawData() // 原始資料
 
 	if err != nil {
@@ -1361,7 +1386,7 @@ func CreateProblemSubmission(c *gin.Context) {
 		}
 
 		// 確認操作權限，限限學生(0)、助教(1)、老師(2)可用
-		if _, err := Check_UserRole(userID, classID); err != nil {
+		if _, err := CheckUserRole(userID, classID); err != nil {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
@@ -1399,7 +1424,7 @@ func CreateProblemSubmission(c *gin.Context) {
 	}
 	problemID := uint(problem_ID)
 	// 確認操作權限，限學生(1)、助教(1)、老師(2)可用
-	if _, err := Check_UserRole(userID, classID); err != nil {
+	if _, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
@@ -1417,7 +1442,7 @@ func CreateProblemSubmission(c *gin.Context) {
 	} else {
 		question_id = strconv.Itoa(int(data.Problem_ID))
 	}
-	URL := hostURL + privateURL + "/problem" + "/" + question_id + "/submission"
+	URL := problemHost + privateURL + "/problem" + "/" + question_id + "/submission"
 
 	rawdata, err := c.GetRawData() // 原始資料
 
