@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/NCNUCodeOJ/BackendClassManagement/models"
+	"github.com/NCNUCodeOJ/BackendClassManagement/mossservice"
 	"github.com/buger/jsonparser"
 
 	"github.com/gin-gonic/gin"
@@ -1465,4 +1466,20 @@ func CreateProblemSubmission(c *gin.Context) {
 
 }
 
-// CreateMoss 呼叫 moss API
+// SetupMoss 啟動 rabbitmq
+func SetupMoss(c *gin.Context) {
+	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	classID := uint(class_id)
+	userID := c.MustGet("userID").(uint)
+	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
+	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Permission denied",
+		})
+		return
+	}
+	mossservice.Setup()
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Moss setup complete",
+	})
+}
