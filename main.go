@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/NCNUCodeOJ/BackendClassManagement/models"
+	"github.com/NCNUCodeOJ/BackendClassManagement/mossservice"
 	"github.com/NCNUCodeOJ/BackendClassManagement/router"
+	"github.com/NCNUCodeOJ/BackendClassManagement/view"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +22,8 @@ var srv *http.Server
 
 func start() {
 	models.Setup()
+	view.Setup()
+	mossservice.Setup()
 
 	r := router.SetupRouter()
 	if gin.Mode() == "debug" {

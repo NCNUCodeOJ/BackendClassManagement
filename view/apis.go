@@ -3,7 +3,9 @@ package view
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,15 +14,29 @@ import (
 	"github.com/NCNUCodeOJ/BackendClassManagement/models"
 	"github.com/NCNUCodeOJ/BackendClassManagement/mossservice"
 	"github.com/buger/jsonparser"
+	"github.com/joho/godotenv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vincentinttsh/replace"
 	"github.com/vincentinttsh/zero"
 )
 
-var problemHost = os.Getenv("PROBLEM_HOST")     // problem
-var testpaperHost = os.Getenv("TESTPAPER_HOST") // test
-var privateURL = "/api/private/v1"
+var problemHost string
+var testpaperHost string
+var privateURL string
+
+// Setup setup
+func Setup() {
+	if gin.Mode() == "test" {
+		err := godotenv.Load(".env.test")
+		if err != nil {
+			log.Println("Error loading .env file")
+		}
+	}
+	problemHost = os.Getenv("PROBLEM_HOST")     // problem
+	testpaperHost = os.Getenv("TESTPAPER_HOST") // test
+	privateURL = "/api/private/v1"
+}
 
 // Role 0 學生 1 助教 2 老師
 // class 課程
@@ -786,10 +802,13 @@ func CreateProblem(c *gin.Context) {
 	classID := uint(id)
 	userID := c.MustGet("userID").(uint)
 	var problem models.Problem
+	var mossTask mossservice.MossTask
 
 	if gin.Mode() == "test" {
 
 		var problemTest models.Problem
+		var mossTask mossservice.MossTask
+
 		rawdata, err := ioutil.ReadAll(c.Request.Body)
 
 		if err != nil {
@@ -805,6 +824,22 @@ func CreateProblem(c *gin.Context) {
 				"message": "Permission denied",
 			})
 			return
+		}
+
+		if language, err := jsonparser.GetString(rawdata, "language"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "language error",
+			})
+			return
+		} else {
+			mossTask.Language = language
+			if mossTask.Validate() != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "language error",
+				})
+				return
+			}
+			problemTest.Language = language
 		}
 
 		// 抓取其中的開始時間
@@ -861,6 +896,22 @@ func CreateProblem(c *gin.Context) {
 		return
 	}
 
+	if language, err := jsonparser.GetString(rawdata, "language"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "language error",
+		})
+		return
+	} else {
+		mossTask.Language = language
+		if mossTask.Validate() != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "language error",
+			})
+			return
+		}
+		problem.Language = language
+	}
+
 	problem.Class_ID = classID               // 設 problem 的課堂ID
 	responseBody := bytes.NewBuffer(rawdata) // 把 rawdata 塞進 body
 	//Leverage Go's HTTP Post function to make request
@@ -868,7 +919,7 @@ func CreateProblem(c *gin.Context) {
 	req, err := http.NewRequest("POST", URL, responseBody)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "system error",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -879,7 +930,7 @@ func CreateProblem(c *gin.Context) {
 	//Handle Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "system error",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -888,14 +939,14 @@ func CreateProblem(c *gin.Context) {
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "system error",
+			"message": err.Error(),
 		})
 		return
 	}
 	// 解析 Response 到 question
 	if err := json.Unmarshal(body, &question); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "system error",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -1215,6 +1266,7 @@ func UpdateProblemQuestion(c *gin.Context) {
 	var problem models.Problem
 	problem.ID = problemID
 	problem.Problem_ID = uint(question_ID)
+
 	// 拿該題目的資料
 	if data, err := models.ProblemByProblemID(problemID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1224,6 +1276,7 @@ func UpdateProblemQuestion(c *gin.Context) {
 	} else {
 		problem.Start_time = data.Start_time
 		problem.End_time = data.End_time
+		problem.Language = data.Language
 	}
 	if start_time, err := jsonparser.GetInt(rawdata, "start_time"); err == nil {
 		problem.Start_time = time.Unix(start_time, 0)
@@ -1231,6 +1284,9 @@ func UpdateProblemQuestion(c *gin.Context) {
 	// 抓取其中的結束時間
 	if end_time, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
 		problem.End_time = time.Unix(end_time, 0)
+	}
+	if language, err := jsonparser.GetString(rawdata, "language"); err == nil {
+		problem.Language = language
 	}
 	// 更新題目資訊
 	if err := models.UpdateProblem(&problem); err != nil {
@@ -1399,10 +1455,30 @@ func CreateProblemSubmission(c *gin.Context) {
 			})
 			return
 		}
+		privateSubmissionID := 123
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
+
+		var submission models.Submission
+
+		submission.ProblemID = problemID
+		submission.UserID = userID
+		submission.PrivateSubmissionID = uint(privateSubmissionID)
+
+		if err := models.CreateSubmission(&submission); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
 		c.JSON(http.StatusCreated, gin.H{
 			"message":       "提交成功",
 			"problem_id":    problemID,
-			"submission_id": 000000000000000001,
+			"submission_id": submission.ID,
 		})
 		return
 	}
@@ -1485,26 +1561,109 @@ func CreateProblemSubmission(c *gin.Context) {
 		})
 		return
 	}
-	// 回傳 api 回傳的東西
-	c.Status(res.StatusCode)
-	c.Writer.Write(body)
+
+	privateSubmissionID, err := jsonparser.GetInt(body, "submission_id")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+
+	var submission models.Submission
+
+	submission.ProblemID = problemID
+	submission.UserID = userID
+	submission.PrivateSubmissionID = uint(privateSubmissionID)
+
+	if err := models.CreateSubmission(&submission); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message":       "submission created",
+		"submission_id": submission.ID,
+	})
 
 }
 
 // SetupMoss 啟動 rabbitmq
 func SetupMoss(c *gin.Context) {
 	class_id, _ := strconv.Atoi(c.Params.ByName("class_id"))
+	problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+	var problemID = uint(problem_id)
+	var mossTask mossservice.MossTask
+	var problem models.Problem
+	var err error
+
 	classID := uint(class_id)
 	userID := c.MustGet("userID").(uint)
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
-	if user_role, err := Check_UserRole(userID, classID); err != nil || user_role < 1 {
+	if user_role, err := CheckUserRole(userID, classID); err != nil || user_role < 1 {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
 	}
-	mossservice.Setup()
+	// 確認是否有題目
+	if problem, err = models.ProblemByProblemID(problemID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Problem not found",
+		})
+		return
+	}
+	if submissions, err := models.GetProblemAllLastestSubmissionID(problemID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		fmt.Println(err.Error())
+	} else {
+		mossTask.Language = problem.Language
+		mossTask.ProblemID = strconv.Itoa(int(problemID))
+		mossTask.ClassID = strconv.Itoa(int(classID))
+		mossTask.Submissions = submissions
+
+		mossTask.Run()
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Moss setup complete",
+		})
+	}
+}
+func UploadMoss(c *gin.Context) {
+	problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+	var problemID = uint(problem_id)
+	var problem models.Problem
+	var err error
+
+	// 確認是否有題目
+	if problem, err = models.ProblemByProblemID(problemID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Problem not found",
+		})
+		return
+	}
+	data := struct {
+		URL string `json:"url"`
+	}{}
+	if err = c.BindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid request",
+		})
+		return
+	}
+	problem.Moss = data.URL
+
+	if err := models.UpdateProblem(&problem); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Moss setup complete",
+		"message": "Moss url updated",
 	})
 }

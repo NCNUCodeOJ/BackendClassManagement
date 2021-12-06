@@ -14,9 +14,10 @@ import (
 
 // MossTask is a template for a moss task
 type MossTask struct {
-	Problem_ID string `json:"problem_id"`
-	Language   string `json:"language"`
-	Mossurl    string `json:"mossurl"`
+	ProblemID   string   `json:"problem_id"`
+	ClassID     string   `json:"class_id"`
+	Language    string   `json:"language"`
+	Submissions []string `json:"submission_ids"`
 }
 
 var supportedLanguage = map[string]bool{
@@ -39,9 +40,9 @@ func failOnError(err error, msg string) {
 func Setup() {
 	var err error
 
-	// if gin.Mode() == "test" {
-	// 	return
-	// }
+	if gin.Mode() == "test" {
+		return
+	}
 	if gin.Mode() == "debug" {
 		err = godotenv.Load()
 		if err != nil {
@@ -78,7 +79,6 @@ func (j *MossTask) Validate() error {
 // Run  Run a new submission
 func (j *MossTask) Run() (err error) {
 	var data []byte
-	log.Print(j)
 	if data, err = json.Marshal(j); err != nil {
 		return
 	}

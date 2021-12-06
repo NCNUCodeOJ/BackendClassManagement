@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 
 	"github.com/NCNUCodeOJ/BackendClassManagement/models"
+	"github.com/NCNUCodeOJ/BackendClassManagement/mossservice"
 	"github.com/NCNUCodeOJ/BackendClassManagement/router"
+	"github.com/NCNUCodeOJ/BackendClassManagement/view"
 	"github.com/appleboy/gofight/v2"
 	"github.com/buger/jsonparser"
 
@@ -25,6 +29,8 @@ var class1ID, problem1ID, test1ID, submission1ID, submission2ID int
 func init() {
 	gin.SetMode(gin.TestMode)
 	models.Setup()
+	view.Setup()
+	mossservice.Setup()
 }
 
 func TestPing(t *testing.T) {
@@ -228,6 +234,7 @@ func TestProblemCreate(t *testing.T) {
 	var data = []byte(`{
 		"end_time": 1638692151,
 		"start_time": 1638692151,
+		"language": "python3",
 		"problem_name":       "接龍遊戲2",
 		"description":        "開始接龍",
 		"input_description":  "567",
@@ -391,6 +398,7 @@ func Test2ProblemCreate(t *testing.T) {
 	var data = []byte(`{
 		"end_time": 1638692151,
 		"start_time": 1638692151,
+		"language": "python3",
 		"problem_name":       "接龍遊戲2",
 		"description":        "開始接龍",
 		"input_description":  "567",
@@ -428,6 +436,20 @@ func TestListProblem(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+func TestMosss(t *testing.T) {
+	var data = []byte(`{
+		"url": "https://moss.tw.edu.cn/login"
+	}`)
+	r := router.SetupRouter()
+	res := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("POST", "/api/private/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/moss", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(res, req)
+	assert.Equal(t, http.StatusOK, res.Code)
+}
+
 func TestMossSetup(t *testing.T) {
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
@@ -437,22 +459,6 @@ func TestMossSetup(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
-
-// func TestMoss(t *testing.T) {
-// 	r := gofight.New()
-// 	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/moss/"+strconv.Itoa(submission1ID)).
-// 		SetHeader(gofight.H{
-// 			"Authorization": token,
-// 		}).
-// 		SetJSON(gofight.D{
-// 			"problem_id":    1,
-// 			"submission_id": 1638692151,
-// 			"language":      "python3",
-// 		}).
-// 		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
-// 			assert.Equal(t, http.StatusCreated, r.Code)
-// 		})
-// }
 
 func TestDeleteProblem(t *testing.T) {
 	r := router.SetupRouter()
@@ -464,10 +470,10 @@ func TestDeleteProblem(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-// func TestCleanup(t *testing.T) {
-// 	err := os.Remove("test.db")
-// 	if err != nil {
-// 		log.Println(err.Error())
-// 		t.Fail()
-// 	}
-// }
+func TestCleanup(t *testing.T) {
+	err := os.Remove("test.db")
+	if err != nil {
+		log.Println(err.Error())
+		t.Fail()
+	}
+}

@@ -125,7 +125,7 @@ func SetupRouter() *gin.Engine {
 	mosss.Use(authMiddleware.MiddlewareFunc())
 	mosss.Use(getUserID())
 	{
-		// 接收moss
+		mosss.POST("", view.UploadMoss)
 	}
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"message": "Page not found"})

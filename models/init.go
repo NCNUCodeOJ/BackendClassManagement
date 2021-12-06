@@ -23,7 +23,7 @@ func Setup() {
 	if os.Getenv("GIN_MODE") != "release" {
 		err = godotenv.Load()
 		if err != nil {
-			log.Println("Error loading .env file")
+			log.Println("Error loading .env.test file")
 		}
 	}
 	if gin.Mode() == "test" {
@@ -55,6 +55,7 @@ func AutoMigrateAll() {
 	DB.AutoMigrate(&ClassUser{})
 	DB.AutoMigrate(&Problem{})
 	DB.AutoMigrate(&Test{})
+	DB.AutoMigrate(&Submission{})
 }
 
 //Ping ping a database
