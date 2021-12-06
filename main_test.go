@@ -253,11 +253,11 @@ func TestProblemCreate(t *testing.T) {
 	r.ServeHTTP(res, req)
 	body, _ := ioutil.ReadAll(res.Body)
 	s := struct {
-		Problem_id int    `json:"problem_id"`
-		Message    string `json:"message"`
+		ProblemID int    `json:"problem_id"`
+		Message   string `json:"message"`
 	}{}
 	json.Unmarshal(body, &s)
-	problem1ID = s.Problem_id
+	problem1ID = s.ProblemID
 
 	assert.Equal(t, http.StatusCreated, res.Code)
 }
@@ -407,8 +407,8 @@ func Test2ProblemCreate(t *testing.T) {
 	r.ServeHTTP(res, req)
 	body, _ := ioutil.ReadAll(res.Body)
 	s := struct {
-		Problem_id int    `json:"problem_id"`
-		Message    string `json:"message"`
+		ProblemID int    `json:"problem_id"`
+		Message   string `json:"message"`
 	}{}
 	json.Unmarshal(body, &s)
 	assert.Equal(t, http.StatusCreated, res.Code)
