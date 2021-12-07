@@ -23,11 +23,8 @@ type SampleTemplate struct {
 	Input  string `json:"input"`
 	Output string `json:"output"`
 }
-
-type getproblemAPIRequest struct {
-	ProblemID         uint             `json:"problem_id"` //  外面看到得problem id
+type getprivateProbAPIRequest struct {
 	ProblemName       string           `json:"problem_name"`
-	ClassID           uint             `json:"class_id"`
 	Description       string           `json:"description"`
 	InputDescription  string           `json:"input_description"`
 	OutputDescription string           `json:"output_description"`
@@ -36,11 +33,11 @@ type getproblemAPIRequest struct {
 	Layer             uint8            `json:"layer"`
 	Sample            []SampleTemplate `json:"samples"`
 	TagsList          []string         `json:"tags_list"`
-	Start_Time        uint             `json:"start_time"`
-	End_Time          uint             `json:"end_time"`
-	Language          string           `json:"language"`
-	Moss              string           `json:"moss"`
-	Hastestcase       string           `json:"hastestcase"`
+}
+type getproblemAPIRequest struct {
+	Start_Time uint   `json:"start_time"`
+	End_Time   uint   `json:"end_time"`
+	Language   string `json:"language"`
 }
 type mossAPIRequest struct {
 	Problem_ID    string `json:"problem_id"`

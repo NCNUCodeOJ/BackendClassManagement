@@ -1103,8 +1103,6 @@ func GetProblemByID(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message":            "problem exist",
-			"problem_id":         problemID,
-			"class_id":           classID,
 			"start_time":         uint(problems.Start_time.Unix()),
 			"end_time":           uint(problems.End_time.Unix()),
 			"problem_name":       "接龍遊戲2",
@@ -1129,8 +1127,8 @@ func GetProblemByID(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
 	problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
 	var problemID = uint(problem_id)
-	var problem_data getproblemAPIRequest // 接收回傳的題目資訊
-	var question_ID int                   // real problem id
+	var problem_data getprivateProbAPIRequest // 接收回傳的題目資訊
+	var question_ID int                       // real problem id
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
 	var user_role int
 	if role, err := CheckUserRole(userID, classID); err != nil {
@@ -1202,21 +1200,15 @@ func GetProblemByID(c *gin.Context) {
 	}
 	// 確認回傳是否有東西
 	if problem_data.ProblemName != "" {
+		var prob models.Problem
 		if problem, err := models.ProblemByProblemID(problemID); err == nil {
-			problem_data.Start_Time = uint(problem.Start_time.Unix())
-			problem_data.End_Time = uint(problem.End_time.Unix())
-			problem_data.ProblemID = problemID
-			problem_data.ClassID = problem.Class_ID
-			problem_data.Language = problem.Language
-			problem_data.Moss = problem.Moss
+			prob = problem
 		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"message":            "problem exist",
-			"problem_id":         problem_data.ProblemID,
-			"class_id":           problem_data.ClassID,
-			"start_time":         problem_data.Start_Time,
-			"end_time":           problem_data.End_Time,
+			"start_time":         uint(prob.Start_time.Unix()),
+			"end_time":           uint(prob.End_time.Unix()),
 			"problem_name":       problem_data.ProblemName,
 			"description":        problem_data.Description,
 			"input_description":  problem_data.InputDescription,
@@ -1226,9 +1218,8 @@ func GetProblemByID(c *gin.Context) {
 			"layer":              problem_data.Layer,
 			"samples":            problem_data.Sample,
 			"tags_list":          problem_data.TagsList,
-			"language":           problem_data.Language,
-			"moss":               problem_data.Moss,
-			"hastestcase":        problem_data.Hastestcase,
+			"language":           prob.Language,
+			"moss":               prob.Moss,
 		})
 
 		return
@@ -1767,7 +1758,6 @@ func GetProblemSubmissionByID(c *gin.Context) {
 			"problem_id":    1,
 			"submission_id": 2,
 			"language":      "python3",
-			"author":        716093190415319041,
 			"code":          "a, b = map(int,input().split())\nprint(a+b)",
 			"cpu_time":      39,
 			"memory":        8962048,

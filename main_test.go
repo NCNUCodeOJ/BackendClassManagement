@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -545,8 +546,9 @@ func TestMosss(t *testing.T) {
 	res := httptest.NewRecorder() // 取得 ResponseRecorder 物件
 	req, _ := http.NewRequest("POST", "/api/private/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/moss", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", token)
 	r.ServeHTTP(res, req)
+	body, _ := ioutil.ReadAll(res.Body)
+	fmt.Println(string(body))
 	assert.Equal(t, http.StatusOK, res.Code)
 }
 
