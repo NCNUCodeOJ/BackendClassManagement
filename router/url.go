@@ -113,7 +113,9 @@ func SetupRouter() *gin.Engine {
 	questionsubmission.Use(authMiddleware.MiddlewareFunc())
 	questionsubmission.Use(getUserID())
 	{
-		questionsubmission.POST("/submission", view.CreateProblemSubmission) // 上傳 submission
+		questionsubmission.POST("/submission", view.CreateProblemSubmission)                // 上傳 submission
+		questionsubmission.GET("/submission/:submission_id", view.GetProblemSubmissionByID) // 拿submission資訊
+		questionsubmission.GET("/submission", view.ListSubmission)                          // 列出所有submission
 	}
 	mosssetup := r.Group(baseURL + "/class/:class_id/problem/:problem_id/moss") // 呼叫moss
 	mosssetup.Use(authMiddleware.MiddlewareFunc())

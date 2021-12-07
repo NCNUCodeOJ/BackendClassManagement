@@ -38,6 +38,9 @@ type getproblemAPIRequest struct {
 	TagsList          []string         `json:"tags_list"`
 	Start_Time        uint             `json:"start_time"`
 	End_Time          uint             `json:"end_time"`
+	Language          string           `json:"language"`
+	Moss              string           `json:"moss"`
+	Hastestcase       string           `json:"hastestcase"`
 }
 type mossAPIRequest struct {
 	Problem_ID    string `json:"problem_id"`

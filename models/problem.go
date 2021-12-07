@@ -56,6 +56,7 @@ func ListProblem(class_id uint) (problem []Problem, err error) {
 	return
 }
 
+// GetProblemAllLastestSubmissionID 拿這堂課所有人最後一個的Problemsubmission
 func GetProblemAllLastestSubmissionID(id uint) (submissions []string, err error) {
 	var problem Problem
 	var classuser []ClassUser
@@ -65,15 +66,50 @@ func GetProblemAllLastestSubmissionID(id uint) (submissions []string, err error)
 	if err = DB.Where(&ClassUser{Class_ID: problem.Class_ID}).Find(&classuser).Error; err != nil {
 		return
 	}
+
 	for _, user := range classuser {
 		var submission Submission
-		if err = DB.Where(&Submission{UserID: user.User_ID}).Order("created_at desc").First(&submission).Error; err != nil {
-			return
+		if err = DB.Where(&Submission{UserID: user.User_ID, ProblemID: id}).Order("created_at desc").First(&submission).Error; err != nil {
+			continue
+		} else {
+			submissions = append(submissions, strconv.Itoa(int(submission.PrivateSubmissionID)))
 		}
+
+	}
+
+	return submissions, nil
+}
+
+// GetOwnAllSubmission 學生列出自己的submission
+func GetOwnAllSubmission(id uint, user_id uint) (submissions []string, err error) {
+	var problem Problem
+	var classuser []ClassUser
+	var submission Submission
+
+	if err = DB.Where("id = ?", id).First(&problem).Error; err != nil {
+		return
+	}
+	if err = DB.Where(&ClassUser{Class_ID: problem.Class_ID}).Find(&classuser).Error; err != nil {
+		return
+	}
+	if err = DB.Where(&Submission{UserID: user_id, ProblemID: id}).Order("created_at desc").First(&submission).Error; err != nil {
+		return []string{""}, nil
+	} else {
 		submissions = append(submissions, strconv.Itoa(int(submission.PrivateSubmissionID)))
 	}
 
-	return
+	return submissions, nil
+}
+
+//SubmissionBySubmissionID 用 submission ID 查詢submission
+func SubmissionBySubmissionID(id uint) (Submission, error) {
+	var submission Submission
+
+	if err := DB.First(&submission, id).Error; err != nil {
+		return Submission{}, err
+	}
+
+	return submission, nil
 }
 
 //ProblemByProblemID 用 作業 ID 查詢作業

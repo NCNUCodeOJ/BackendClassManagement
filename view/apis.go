@@ -54,6 +54,37 @@ func CheckUserRole(userID uint, classID uint) (int, error) {
 
 	return classUser.Role, nil
 }
+func IsSutdent(userID uint, classID uint) (err error) {
+	classUser, err := models.ClassUserByClassUserID(userID, classID)
+	if err != nil {
+		return err
+	}
+	if classUser.Role == 0 {
+		return nil
+	}
+	return
+}
+func IsTeacher(userID uint, classID uint) (err error) {
+
+	classUser, err := models.ClassUserByClassUserID(userID, classID)
+	if err != nil {
+		return err
+	}
+	if classUser.Role == 2 {
+		return nil
+	}
+	return
+}
+func IsTA(userID uint, classID uint) (err error) {
+	classUser, err := models.ClassUserByClassUserID(userID, classID)
+	if err != nil {
+		return err
+	}
+	if classUser.Role == 1 {
+		return nil
+	}
+	return
+}
 
 // CreateClass 新增課程
 func CreateClass(c *gin.Context) {
@@ -86,6 +117,7 @@ func CreateClass(c *gin.Context) {
 	teacher.Class_ID = class.ID
 	teacher.User_ID = userID
 	teacher.Role = 2
+
 	// 新增課堂使用者
 	if err := models.CreateClassUser(&teacher); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -663,6 +695,7 @@ func ListClass(c *gin.Context) {
 	for _, data := range classUser {
 		classIDs = append(classIDs, data.Class_ID)
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"classes": classIDs,
 		"message": "list class complete",
@@ -710,6 +743,7 @@ func ListClassUser(c *gin.Context) {
 		"classusers": classUsersList,
 		"message":    "list classuser complete",
 	})
+
 	return
 }
 
@@ -815,6 +849,7 @@ func CreateProblem(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "system1 error",
 			})
+
 			return
 		}
 
@@ -866,6 +901,7 @@ func CreateProblem(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "系統錯誤",
 			})
+
 			return
 		}
 
@@ -893,6 +929,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system1 error",
 		})
+
 		return
 	}
 
@@ -900,6 +937,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "language error",
 		})
+
 		return
 	} else {
 		mossTask.Language = language
@@ -907,6 +945,7 @@ func CreateProblem(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "language error",
 			})
+
 			return
 		}
 		problem.Language = language
@@ -921,6 +960,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
+
 		return
 	}
 	// 設 header 原封不動船過去
@@ -932,6 +972,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
+
 		return
 	}
 	defer res.Body.Close()
@@ -941,6 +982,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
+
 		return
 	}
 	// 解析 Response 到 question
@@ -948,6 +990,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
 		})
+
 		return
 	}
 	// 確認是否創建成功
@@ -965,6 +1008,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "開始時間未填寫",
 		})
+
 	}
 	// 抓取其中的結束時間
 	if endTime, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
@@ -979,6 +1023,7 @@ func CreateProblem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "系統錯誤",
 		})
+
 		return
 	}
 
@@ -999,11 +1044,15 @@ func GetProblemByID(c *gin.Context) {
 		var problemID = uint(pid)
 
 		// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
-		if _, err := CheckUserRole(userID, classID); err != nil {
+		var userRole int
+		if user_role, err := CheckUserRole(userID, classID); err != nil {
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Permission denied",
 			})
+
 			return
+		} else {
+			userRole = user_role
 		}
 		var problems models.Problem
 		if problem, err := models.ProblemByProblemID(problemID); err != nil {
@@ -1012,6 +1061,12 @@ func GetProblemByID(c *gin.Context) {
 			})
 			return
 		} else {
+			if problem.Start_time.Unix() > time.Now().Unix() && userRole < 1 {
+				c.JSON(http.StatusForbidden, gin.H{
+					"message": "Permission denied",
+				})
+				return
+			}
 			problems = problem
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -1029,6 +1084,9 @@ func GetProblemByID(c *gin.Context) {
 			"layer":              1,
 			"samples":            `[{"input": "123", "output": "456"},{"input": "456", "output": "789"}]`,
 			"tags_list":          `["簡單"]`,
+			"language":           "python",
+			"moss":               "url",
+			"hastestcase":        "True",
 		})
 
 		return
@@ -1042,11 +1100,14 @@ func GetProblemByID(c *gin.Context) {
 	var problem_data getproblemAPIRequest // 接收回傳的題目資訊
 	var question_ID int                   // real problem id
 	// 確認操作權限，限學生(0)、助教(1)、老師(2)可用，
-	if _, err := CheckUserRole(userID, classID); err != nil {
+	var user_role int
+	if role, err := CheckUserRole(userID, classID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Permission denied",
 		})
 		return
+	} else {
+		user_role = role
 	}
 	// 檢查該堂課是否有這個題目
 	if problem, err := models.ProblemByProblemID(problemID); err != nil {
@@ -1055,6 +1116,12 @@ func GetProblemByID(c *gin.Context) {
 		})
 		return
 	} else {
+		if uint(problem.Start_time.Unix()) > uint(time.Now().Unix()) && user_role < 2 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "too early",
+			})
+			return
+		}
 		question_ID = int(problem.Problem_ID)
 	}
 
@@ -1099,6 +1166,7 @@ func GetProblemByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
+		return
 	}
 	// 確認回傳是否有東西
 	if problem_data.ProblemName != "" {
@@ -1107,6 +1175,8 @@ func GetProblemByID(c *gin.Context) {
 			problem_data.End_Time = uint(problem.End_time.Unix())
 			problem_data.ProblemID = problemID
 			problem_data.ClassID = problem.Class_ID
+			problem_data.Language = problem.Language
+			problem_data.Moss = problem.Moss
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -1124,6 +1194,9 @@ func GetProblemByID(c *gin.Context) {
 			"layer":              problem_data.Layer,
 			"samples":            problem_data.Sample,
 			"tags_list":          problem_data.TagsList,
+			"language":           problem_data.Language,
+			"moss":               problem_data.Moss,
+			"hastestcase":        problem_data.Hastestcase,
 		})
 
 		return
@@ -1422,6 +1495,7 @@ func UploadQuestionTestCase(c *gin.Context) {
 	// 回傳 api 回傳的東西
 	c.Status(res.StatusCode)
 	c.Writer.Write(body)
+
 }
 
 // CreateProblemSubmission 創建題目submission (學生、助教、老師可用)
@@ -1516,6 +1590,12 @@ func CreateProblemSubmission(c *gin.Context) {
 		})
 		return
 	} else {
+		if data.End_time.Unix() < time.Now().Unix() {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "Problem not found",
+			})
+			return
+		}
 		question_id = strconv.Itoa(int(data.Problem_ID))
 	}
 	URL := problemHost + privateURL + "/problem" + "/" + question_id + "/submission"
@@ -1588,6 +1668,237 @@ func CreateProblemSubmission(c *gin.Context) {
 		"submission_id": submission.ID,
 	})
 
+}
+
+// GetProblemSubmissionByID 獲取題目submission (學生、助教、老師可用)
+func GetProblemSubmissionByID(c *gin.Context) {
+	if gin.Mode() == "test" {
+		class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+		classID := uint(class_id)
+
+		userID := c.MustGet("userID").(uint)
+		problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+		var problemID = uint(problem_id)
+		submission_id, _ := strconv.Atoi(c.Params.ByName("submission_id")) // 抓 URL 的 submission_id ，才知道是哪個題目
+
+		// 確認操作權限，限限學生(0)、助教(1)、老師(2)可用
+		if _, err := CheckUserRole(userID, classID); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"message": "Permission denied",
+			})
+			return
+		}
+		// 確認是否有題目
+
+		if _, err := models.ProblemByProblemID(problemID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
+		_, err := models.SubmissionBySubmissionID(uint(submission_id))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "Submission not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":       "提交成功",
+			"problem_id":    1,
+			"submission_id": 2,
+			"language":      "python3",
+			"author":        716093190415319041,
+			"code":          "a, b = map(int,input().split())\nprint(a+b)",
+			"cpu_time":      39,
+			"memory":        8962048,
+			"score":         "     ",
+			"status":        0,
+			"testcase":      `[{"cpu_time":39,"memory":8962048,"status":0,"test_case":"1"}]`,
+			"wrong":         "",
+		})
+		return
+	}
+	class_id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+	classID := uint(class_id)
+	submission_id, _ := strconv.Atoi(c.Params.ByName("submission_id")) // 抓 URL 的 submission_id ，才知道是哪個題目
+	userID := c.MustGet("userID").(uint)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	problem_ID, err := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	problemID := uint(problem_ID)
+	// 確認操作權限，限學生(1)、助教(1)、老師(2)可用
+	if _, err := CheckUserRole(userID, classID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Permission denied",
+		})
+		return
+	}
+
+	// 檢查是否有該題目
+	if _, err := models.ProblemByProblemID(problemID); err != nil {
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Problem not found",
+		})
+		return
+	}
+	// 檢查是否有該 submission
+	submission, err := models.SubmissionBySubmissionID(uint(submission_id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Submission not found",
+		})
+		return
+	}
+	URL := problemHost + privateURL + "/submission" + "/" + strconv.Itoa(int(submission.PrivateSubmissionID))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	//Leverage Go's HTTP Post function to make request
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", URL, nil)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	// 設 header
+	req.Header.Set("Authorization", c.GetHeader("Authorization"))
+	req.Header.Set("Content-Type", "application/json")
+	res, err := client.Do(req)
+
+	//Handle Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	defer res.Body.Close()
+	//Read the response body
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+
+	c.Status(res.StatusCode)
+	c.Writer.Write(body)
+}
+
+// ListSubmission 列出題目所有submission (老師可用)
+func ListSubmission(c *gin.Context) {
+	if gin.Mode() == "test" {
+		class_id, _ := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+		classID := uint(class_id)
+
+		userID := c.MustGet("userID").(uint)
+		problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+		var problemID = uint(problem_id)
+		// 確認操作權限，限限學生(0)、助教(1)、老師(2)可用
+		if _, err := CheckUserRole(userID, classID); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{
+				"message": "Permission denied",
+			})
+			return
+		}
+		// 確認是否有題目
+
+		if _, err := models.ProblemByProblemID(problemID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "list classproblem complete",
+			"problem_id": `[1231231,1231231]`,
+		})
+		return
+	}
+	id, err := strconv.Atoi(c.Params.ByName("class_id")) // 抓 URL 的 class_id ，才知道是哪堂課
+	classID := uint(id)
+	userID := c.MustGet("userID").(uint)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "system error",
+		})
+		return
+	}
+	problem_id, _ := strconv.Atoi(c.Params.ByName("problem_id")) // 抓 URL 的 problem_id ，才知道是哪個題目
+	var problemID = uint(problem_id)
+	// 確認操作權限，限可用，使用者要在該課程，才能查列出所有該課的課程題目的 submission
+	var user_role int
+	if userRole, err := CheckUserRole(userID, classID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Permission denied",
+		})
+		return
+	} else {
+		user_role = userRole
+	}
+	// 確認是否有該題目
+	if _, err := models.ProblemByProblemID(problemID); err != nil {
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Problem not found",
+		})
+		return
+	}
+	// 列出課堂題目所有 submission
+	if user_role == 2 || user_role == 1 {
+		submissions, err := models.GetProblemAllLastestSubmissionID(problemID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"submissions": submissions,
+			"message":     "list classproblem complete",
+		})
+		return
+
+	}
+	if user_role == 1 {
+		submissions, err := models.GetOwnAllSubmission(problemID, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "system error",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"submissions": submissions,
+			"message":     "list classproblem complete",
+		})
+		return
+
+	}
+	return
 }
 
 // SetupMoss 啟動 rabbitmq

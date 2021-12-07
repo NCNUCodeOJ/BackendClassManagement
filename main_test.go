@@ -23,8 +23,8 @@ import (
 )
 
 // cspell:disable-next-line
-var token = "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6ZmFsc2UsImV4cCI6NDc5MTA4MjEyMywiaWQiOiI3MTI0MTMxNTQxOTcxMTA3ODYiLCJvcmlnX2lhdCI6MTYzNzQ4MjEyMywidXNlcm5hbWUiOiJ0ZXN0X3VzZXIifQ.pznOSok8X7qv6FSIihJnma_zEy70TerzOs0QDZOq_4RPYOKSEOOYTZ9-VLm2P9XRldS17-7QrLFwjjfXyCodtA"
-var class1ID, problem1ID, test1ID, submission1ID, submission2ID int
+var token = "Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6dHJ1ZSwiZXhwIjo0NzYwNjk2NDkyLCJpZCI6IjEiLCJvcmlnX2lhdCI6MTYzODYzMjQ5MiwidGVhY2hlciI6dHJ1ZSwidXNlcm5hbWUiOiJ2aW5jZW50In0.SUnwDQX_wkWlZdTMyCjhqIX4TIIzYrrY7lTiR_E2K8tvQBU1pyUgja60K0xcF1_x0m-egvRJQmhix5l6wdoR6g"
+var class1ID, problem1ID, problem2ID, problem3ID, test1ID, submission1ID, submission2ID int
 
 func init() {
 	gin.SetMode(gin.TestMode)
@@ -44,8 +44,7 @@ func TestPing(t *testing.T) {
 func TestClassCreate(t *testing.T) {
 	var data = []byte(`{
 		"class_name":       "程設1",
-		"teacher":        1
-
+		"teacher": 1
 	}`)
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
@@ -96,7 +95,7 @@ func TestUpdateClass(t *testing.T) {
 func TestClassUserCreate(t *testing.T) {
 	var data = []byte(`{
 		"class_id":       ` + strconv.Itoa(class1ID) + `,
-		"user_id":        1,
+		"user_id":        2,
 		"role":  0
 	}`)
 	r := router.SetupRouter()
@@ -110,7 +109,7 @@ func TestClassUserCreate(t *testing.T) {
 func TestGetClassUserByID(t *testing.T) {
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
-	req, _ := http.NewRequest("GET", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/1", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/2", nil)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", token)
 	r.ServeHTTP(w, req)
@@ -120,12 +119,12 @@ func TestGetClassUserByID(t *testing.T) {
 func TestUpdateClassUser(t *testing.T) {
 	var data = []byte(`{
 		"class_id":       ` + strconv.Itoa(class1ID) + `,
-		"user_id": 1,
+		"user_id": 2,
 		"role": 1
 	}`)
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
-	req, _ := http.NewRequest("PATCH", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/1", bytes.NewBuffer(data))
+	req, _ := http.NewRequest("PATCH", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/2", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", token)
 	r.ServeHTTP(w, req)
@@ -134,7 +133,7 @@ func TestUpdateClassUser(t *testing.T) {
 func TestDeleteClassUser(t *testing.T) {
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
-	req, _ := http.NewRequest("DELETE", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/1", nil)
+	req, _ := http.NewRequest("DELETE", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser/2", nil)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", token)
 	r.ServeHTTP(w, req)
@@ -190,6 +189,20 @@ func TestUpdateTest(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
+}
+func TestClassUserCreate2(t *testing.T) {
+	var data = []byte(`{
+		"class_id":       ` + strconv.Itoa(class1ID) + `,
+		"user_id":        2,
+		"role":  0
+	}`)
+	r := router.SetupRouter()
+	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("POST", "/api/v1/class/"+strconv.Itoa(class1ID)+"/classuser", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code)
 }
 func TestListClass(t *testing.T) {
 	r := router.SetupRouter()
@@ -247,7 +260,7 @@ func TestProblemCreate(t *testing.T) {
 			{"input": "123", "output": "456"},
 			{"input": "456", "output": "789"}
 		],
-		"tags_list":          ["簡單"],
+		"tags_list":          ["1"],
 		"hastestcase": "True"
 	}`)
 	r := router.SetupRouter()
@@ -284,7 +297,7 @@ func TestEditProblem(t *testing.T) {
 			{"input": "123", "output": "456"},
 			{"input": "789", "output": "123"}
 		],
-		"tags_list":          ["難"]
+		"tags_list":          ["4"]
 	}`)
 	r := router.SetupRouter()
 	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
@@ -359,10 +372,77 @@ func TestGetProblem3(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+func Test2ProblemCreate(t *testing.T) {
+	var data = []byte(`{
+		"end_time": 1670371704,
+		"start_time": 1638692151,
+		"language": "python3",
+		"problem_name":       "接龍遊戲2",
+		"description":        "開始接龍",
+		"input_description":  "567",
+		"output_description": "789",
+		"memory_limit":       134217728,
+		"cpu_time":           1000,
+		"program_name":	      "Main",
+		"layer":              1,
+		"sample":             [
+			{"input": "123", "output": "456"},
+			{"input": "456", "output": "789"}
+		],
+		"tags_list":          ["1"]
+	}`)
+	r := router.SetupRouter()
+	res := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("POST", "/api/v1/class/"+strconv.Itoa(class1ID)+"/problem", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(res, req)
+	body, _ := ioutil.ReadAll(res.Body)
+	s := struct {
+		ProblemID int    `json:"problem_id"`
+		Message   string `json:"message"`
+	}{}
+
+	json.Unmarshal(body, &s)
+	problem2ID = s.ProblemID
+	assert.Equal(t, http.StatusCreated, res.Code)
+}
+func TestUploadQuestionTestCase2(t *testing.T) {
+	r := gofight.New()
+
+	url := "/api/v1/class/" + strconv.Itoa(class1ID) + "/problem/" + strconv.Itoa(problem2ID) + "/testcase"
+	r.POST(url).
+		SetHeader(gofight.H{
+			"Authorization": token,
+		}).
+		SetFileFromPath([]gofight.UploadFile{
+			{
+				Path: "./test/testcase2.zip",
+				Name: "testcase",
+			}}).
+		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+
+			assert.Equal(t, http.StatusCreated, r.Code)
+		})
+	r = gofight.New()
+	r.POST(url).
+		SetHeader(gofight.H{
+			"Authorization": token,
+		}).
+		SetFileFromPath([]gofight.UploadFile{
+			{
+				Path: "./test/testcase.zip",
+				Name: "testcase",
+			}}).
+		Run(router.SetupRouter(), func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
+			assert.Equal(t, http.StatusCreated, r.Code)
+		})
+}
 func TestQuestionSubmissionCreate2(t *testing.T) {
 	r := gofight.New()
 
-	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/submission").
+	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem2ID)+"/submission").
 		SetHeader(gofight.H{
 			"Authorization": token,
 		}).
@@ -377,7 +457,7 @@ func TestQuestionSubmissionCreate2(t *testing.T) {
 			submission1ID = int(id)
 			assert.Equal(t, http.StatusCreated, r.Code)
 		})
-	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem1ID)+"/submission").
+	r.POST("/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem2ID)+"/submission").
 		SetHeader(gofight.H{
 			"Authorization": token,
 		}).
@@ -393,11 +473,28 @@ func TestQuestionSubmissionCreate2(t *testing.T) {
 			assert.Equal(t, http.StatusCreated, r.Code)
 		})
 }
-
-func Test2ProblemCreate(t *testing.T) {
+func TestGetProblemSubmission(t *testing.T) {
+	r := router.SetupRouter()
+	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("GET", "/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem2ID)+"/submission/"+strconv.Itoa(submission1ID), nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+func TestListSubmission2(t *testing.T) {
+	r := router.SetupRouter()
+	w := httptest.NewRecorder() // 取得 ResponseRecorder 物件
+	req, _ := http.NewRequest("GET", "/api/v1/class/"+strconv.Itoa(class1ID)+"/problem/"+strconv.Itoa(problem2ID)+"/submission", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+func Test3ProblemCreate(t *testing.T) {
 	var data = []byte(`{
-		"end_time": 1638692151,
-		"start_time": 1638692151,
+		"end_time": 1670371704,
+		"start_time": 1670371704,
 		"language": "python3",
 		"problem_name":       "接龍遊戲2",
 		"description":        "開始接龍",
@@ -411,7 +508,7 @@ func Test2ProblemCreate(t *testing.T) {
 			{"input": "123", "output": "456"},
 			{"input": "456", "output": "789"}
 		],
-		"tags_list":          ["簡單"]
+		"tags_list":          ["1"]
 	}`)
 	r := router.SetupRouter()
 	res := httptest.NewRecorder() // 取得 ResponseRecorder 物件
@@ -424,7 +521,9 @@ func Test2ProblemCreate(t *testing.T) {
 		ProblemID int    `json:"problem_id"`
 		Message   string `json:"message"`
 	}{}
+
 	json.Unmarshal(body, &s)
+	problem3ID = s.ProblemID
 	assert.Equal(t, http.StatusCreated, res.Code)
 }
 func TestListProblem(t *testing.T) {
