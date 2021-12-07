@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -859,7 +860,18 @@ func CreateProblem(c *gin.Context) {
 
 			return
 		}
+		var programName string
+		if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
+			programName = program_name
+		}
+		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+		if !isValidProgramName(programName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "ProgramName can only contain letters and numbers",
+			})
 
+			return
+		}
 		// 確認操作權限，限助教(1)、老師(2)可用
 		if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 			c.JSON(http.StatusForbidden, gin.H{
@@ -935,6 +947,19 @@ func CreateProblem(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system1 error",
+		})
+
+		return
+	}
+	// 檢查 programname
+	var programName string
+	if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
+		programName = program_name
+	}
+	isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+	if !isValidProgramName(programName) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "ProgramName can only contain letters and numbers",
 		})
 
 		return
@@ -1261,6 +1286,18 @@ func UpdateProblemQuestion(c *gin.Context) {
 		if end_time, err := jsonparser.GetInt(rawdata, "end_time"); err == nil {
 			problem.End_time = time.Unix(end_time, 0)
 		}
+		// 檢查 programname
+		var programName string
+		if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
+			programName = program_name
+		}
+		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+		if !isValidProgramName(programName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "ProgramName can only contain letters and numbers",
+			})
+			return
+		}
 		// 更新題目資訊
 		if err := models.UpdateProblem(&problem); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -1307,6 +1344,18 @@ func UpdateProblemQuestion(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "system error",
 		})
+		return
+	}
+	var programName string
+	if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
+		programName = program_name
+	}
+	isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+	if !isValidProgramName(programName) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "ProgramName can only contain letters and numbers",
+		})
+
 		return
 	}
 	responseBody := bytes.NewBuffer(rawdata)
