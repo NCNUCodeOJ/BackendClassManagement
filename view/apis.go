@@ -146,6 +146,7 @@ func CreateClassUser(c *gin.Context) {
 		})
 		return
 	}
+
 	if err := c.BindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
@@ -155,6 +156,12 @@ func CreateClassUser(c *gin.Context) {
 	if zero.IsZero(data) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "未按照格式填寫",
+		})
+		return
+	}
+	if _, err := CheckUserRole(*data.User_ID, classID); err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "user already exist",
 		})
 		return
 	}
