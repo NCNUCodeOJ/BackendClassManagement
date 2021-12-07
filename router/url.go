@@ -124,7 +124,6 @@ func SetupRouter() *gin.Engine {
 		mosssetup.GET("", view.SetupMoss) // 上傳 SetUp Moss
 	}
 	mosss := r.Group(privateURL + "/class/:class_id/problem/:problem_id/moss")
-	mosss.Use(authMiddleware.MiddlewareFunc())
 	mosss.Use(getUserID())
 	{
 		mosss.POST("", view.UploadMoss)
