@@ -863,15 +863,16 @@ func CreateProblem(c *gin.Context) {
 		var programName string
 		if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
 			programName = program_name
-		}
-		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
-		if !isValidProgramName(programName) {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "ProgramName can only contain letters and numbers",
-			})
+			isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+			if !isValidProgramName(programName) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "ProgramName can only contain letters and numbers",
+				})
 
-			return
+				return
+			}
 		}
+
 		// 確認操作權限，限助教(1)、老師(2)可用
 		if userRole, err := CheckUserRole(userID, classID); err != nil || userRole < 1 {
 			c.JSON(http.StatusForbidden, gin.H{
@@ -955,14 +956,13 @@ func CreateProblem(c *gin.Context) {
 	var programName string
 	if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
 		programName = program_name
-	}
-	isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
-	if !isValidProgramName(programName) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "ProgramName can only contain letters and numbers",
-		})
-
-		return
+		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+		if !isValidProgramName(programName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "ProgramName can only contain letters and numbers",
+			})
+			return
+		}
 	}
 
 	if language, err := jsonparser.GetString(rawdata, "language"); err != nil {
@@ -1290,14 +1290,15 @@ func UpdateProblemQuestion(c *gin.Context) {
 		var programName string
 		if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
 			programName = program_name
+			isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+			if !isValidProgramName(programName) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "ProgramName can only contain letters and numbers",
+				})
+				return
+			}
 		}
-		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
-		if !isValidProgramName(programName) {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "ProgramName can only contain letters and numbers",
-			})
-			return
-		}
+
 		// 更新題目資訊
 		if err := models.UpdateProblem(&problem); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -1349,15 +1350,16 @@ func UpdateProblemQuestion(c *gin.Context) {
 	var programName string
 	if program_name, err := jsonparser.GetString(rawdata, "program_name"); err == nil {
 		programName = program_name
-	}
-	isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
-	if !isValidProgramName(programName) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "ProgramName can only contain letters and numbers",
-		})
+		isValidProgramName := regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
+		if !isValidProgramName(programName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "ProgramName can only contain letters and numbers",
+			})
 
-		return
+			return
+		}
 	}
+
 	responseBody := bytes.NewBuffer(rawdata)
 	//Leverage Go's HTTP Post function to make request
 	client := &http.Client{}
